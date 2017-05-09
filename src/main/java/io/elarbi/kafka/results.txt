@@ -1,0 +1,43 @@
+batch inserts single thread 10_000 messages:
+========================================
+358s
+
+batch inserts 4 threads 10_000 messages:
+========================================
+180s
+
+batch inserts 16 threads 10_000 messages:
+========================================
+88s
+
+batch inserts 40 threads 10_000 messages
++ innodb_thread_concurrency=9
+87s
+
+batch inserts 40 threads 10_000 messages:
+========================================
++
+innodb_thread_concurrency=32
+27s
+
+batch inserts 64 threads 10_000 messages:
+========================================
++
+innodb_thread_concurrency=64
+16s
+
+batch inserts 64 threads 10_000 messages:
+========================================
++
+innodb_thread_concurrency=64
++
+innodb_buffer_pool_size=2G
+14s
+
+batch inserts 64 threads One million messages:
+=============================================
++
+innodb_thread_concurrency=64
++
+innodb_buffer_pool_size=2G
+1300s (~21 min)
