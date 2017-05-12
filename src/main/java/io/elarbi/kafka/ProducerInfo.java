@@ -10,7 +10,6 @@ import lombok.extern.log4j.Log4j;
  */
 @Getter
 @Setter
-@Log4j
 public class ProducerInfo {
 
     private int nbOfMessagesToPublish;

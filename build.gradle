@@ -1,7 +1,21 @@
 group 'org.elarbi'
-version '1.0-SNAPSHOT'
+version '1.0'
 
 apply plugin: 'java'
+apply plugin: 'idea'
+
+
+//create a single Jar with all dependencies
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'io.elarbi.kafka.WriteReadBillionMessages'
+    }
+    baseName = project.name
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
 
 repositories {
     mavenCentral()
@@ -10,6 +24,7 @@ repositories {
 dependencies {
     compile 'org.springframework.kafka:spring-kafka:1.1.2.RELEASE'
     compile group: 'org.projectlombok', name: 'lombok', version: '1.16.16'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.41'
 
     testCompile 'org.springframework.kafka:spring-kafka-test:1.1.2.RELEASE'
     testCompile group: 'junit', name: 'junit', version: '4.11'
