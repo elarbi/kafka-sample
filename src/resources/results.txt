@@ -36,8 +36,7 @@ innodb_buffer_pool_size=2G
 
 batch inserts 64 threads One million messages:
 =============================================
-+
-innodb_thread_concurrency=64
+innodb_thread_concurrency = 512
 +
 innodb_buffer_pool_size=2G
-1300s (~21 min)
+elapsedTime in minutes: 20min !

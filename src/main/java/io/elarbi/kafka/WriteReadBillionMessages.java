@@ -1,5 +1,7 @@
 package io.elarbi.kafka;
 
+import org.apache.commons.cli.*;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -27,22 +29,73 @@ public class WriteReadBillionMessages {
 
     static long NB_MESSAGES = ONE_MILLION;
 
+    private static String SQL_INSERT_INTO_MEESAGES = "INSERT INTO MESSAGES(id, payload) VALUES (?, ?)";
+
+
     //Run mysql before launch
     //set a Message(id: String, payload: String) table
 
     final static int MAX_BATCH_SIZE = 1_000;
     static int batchSize = 0;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ParseException {
 
-        String connectionURL = args[0];
-        long elapsedTime = insertInBatchAndMultiThread(connectionURL, FOUR_MILLION, 128);
+        Option urlOption = Option.builder("url")
+                .longOpt("url") //
+                .desc("Url to connect to mysql")
+                .hasArg(true)
+                .argName("url")
+                .required(false)
+                .build();
 
+        Option threadPerCoreOption = Option.builder("threads")
+                .longOpt("threads") //
+                .desc("Number of threads per core that will share the work to do")
+                .hasArg(true)
+                .argName("threads")
+                .required(false)
+                .build();
+
+        Option sizeOption = Option.builder("size")
+                .longOpt("size") //
+                .desc("Size in Gb of the database at the end of execution")
+                .hasArg(true)
+                .argName("size")
+                .required(false)
+                .build();
+
+
+        Options options = new Options().addOption(urlOption)
+                .addOption(sizeOption)
+                .addOption(threadPerCoreOption);
+
+        final CommandLineParser parser = new DefaultParser();
+        final CommandLine line = parser.parse(options, args);
+
+        String connectionURL = line.getOptionValue("url", "jdbc:mysql://localhost:3306/messaging?user=root&password=manager&useSSL=false");
+
+        int nbThreadsPerCore = Integer.valueOf(line.getOptionValue("threads", "64"));
+
+        //2 Gb as default alue
+        int dbSize = Integer.valueOf(line.getOptionValue("size", "2"));
+
+        int messageLength = new StringBuilder(Message.createBigMessage().getId()).append(Message.createBigMessage().getPayload()).length();
+
+        double tmp = (dbSize * Math.pow(1_024, 3))/ messageLength;
+        int nbOfMessages = new Double(tmp).intValue() ;
+
+        System.out.println("Size at the end: " + dbSize + " Gb");
+        System.out.println("Script will create: " + nbOfMessages + " Messages");
+        System.out.println("Deployed on: " + nbOfMessages + "Messages");
+
+        long elapsedTime = insertInBatchAndMultiThread(connectionURL, nbOfMessages, nbThreadsPerCore);
+
+
+        System.out.println("Inserted in batch of: " + MAX_BATCH_SIZE);
         System.out.println("elapsedTime in seconds: " + TimeUnit.MILLISECONDS.toSeconds(elapsedTime));
         System.out.println("elapsedTime in minutes: " + TimeUnit.MILLISECONDS.toMinutes(elapsedTime));
 
     }
-
 
 
     private static long insertInBatchAndMultiThread(String connectionURL, long numberOfMessages, int nbThreadsPerCore) {
@@ -52,7 +105,8 @@ public class WriteReadBillionMessages {
 
         int nbOfParallelTasks = availableProcessors * nbThreadsPerCore;
 
-        System.out.println("Forking " + nbOfParallelTasks + " tasks");
+        System.out.println("Available processors on your machine: " + availableProcessors);
+        System.out.println("Forking " +nbThreadsPerCore + " threads per core => "+ nbOfParallelTasks + " threads");
         ExecutorService executorService = Executors.newFixedThreadPool(nbOfParallelTasks);
 
         Callable<Object> callable = new Callable<Object>() {
@@ -83,10 +137,9 @@ public class WriteReadBillionMessages {
         try {
 
             Connection conn = DriverManager.getConnection(connURL);
-            //Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/messaging?user=root&password=manager");
+            //Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/messaging?user=root&password=manager&useSSL=false"");
 
-            String sql = "INSERT INTO MESSAGES(id, payload) VALUES (?, ?)";
-            PreparedStatement ps = conn.prepareStatement(sql);
+            PreparedStatement ps = conn.prepareStatement(SQL_INSERT_INTO_MEESAGES);
 
             Message message = Message.createBigMessage();
 
@@ -114,6 +167,7 @@ public class WriteReadBillionMessages {
         return elapsedTime;
 
     }
+
     private static void storeToDB(PreparedStatement ps) throws SQLException {
         ps.executeBatch();
     }
